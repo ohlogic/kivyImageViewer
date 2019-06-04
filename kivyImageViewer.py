@@ -28,18 +28,38 @@ from kivy.app import App
 from kivy.uix.filechooser import FileChooserListView
 from kivy.config import Config
 from kivy.core.window import Window
+from kivy.clock import Clock
 
 import os
 from pathlib import Path
 
 
-class MyCustomImageWidget(Widget):
+
+class TopBuildWidget(Widget):
     def __init__(self, *args, **kwargs):
+        super(TopBuildWidget, self).__init__(**kwargs)
+
+        with self.canvas:
+            pass
+
+        with self.canvas.before:
+            # you can use this to add instructions rendered before
+            #PushMatrix()
+            pass
+            
+        with self.canvas.after:
+            # you can use this to add instructions rendered after
+            #PopMatrix()
+            pass
+
+
+class MyCustomImageWidget(Widget):
+    def __init__(self, filepath, *args, **kwargs):
         super(MyCustomImageWidget, self).__init__(**kwargs)
 
         with self.canvas:
         
-            self.bg = Image(source=args[0])
+            self.bg = Image(source=filepath)
             
             self.allow_stretch = True
             self.keep_ratio = True
@@ -63,7 +83,7 @@ class MyCustomImageWidget(Widget):
 
 
 class MyFolderChooser(Widget):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, superparent, *args, **kwargs):
         super(MyFolderChooser, self).__init__(**kwargs)
         # filter added. Since windows will throw error on sys files
         self.fclv = FileChooserListView(path='/', 
@@ -74,11 +94,8 @@ class MyFolderChooser(Widget):
              self.bg =  self.fclv
              self.bg.size = Window.size
         
-        
-        self.superparent = args[0]
-        self.superparent.popup.content.text = ""
-        self.superparent.popup.title = ""
-        
+        self.superparent = superparent
+ 
         self.add_widget(self.fclv)
         self.buttonselectfolder = Button(text='Select folder', 
             size=(Window.width, 40), size_hint=(None, None))
@@ -93,7 +110,7 @@ class MyFolderChooser(Widget):
         if os.path.isdir(selection):
             self.stored_folder = selection
         elif os.path.isfile(selection):
-            self.stored_folder = Path(selection).parent
+            self.stored_folder = str(Path(selection).parent)
         self.load_images(self.stored_folder)
  
     def load_images(self, f):
@@ -110,8 +127,6 @@ class MyFolderChooser(Widget):
         images = []
         self.images = images
 
-        self.superparent.popup.title = directory
-
         for root, dirs, files in os.walk(directory):
             for file in files:
                 if file.lower().endswith(ext):
@@ -124,12 +139,14 @@ class MyFolderChooser(Widget):
                 pass    
                 
         Window.remove_widget(self)
-        #self.superparent.popup.dismiss()
-        Window.add_widget(self.superparent.customwidget)
-        Window.bind(on_key_down=self.superparent._on_keyboard_down)
+
+        cw = MyCustomImageWidget(directory)
+        Window.add_widget(cw)
+        self.superparent.customwidget = cw   # needed for the Window keybindings
+        self.superparent.topwidget = cw      # now MyCustomImageWidget is on top
         
         if len(self.images) >= 1:
-            self.superparent.customwidget.bg.source=self.images[0]
+            cw.bg.source=self.images[0]
 
 class MyImageApp(App):
 
@@ -137,14 +154,23 @@ class MyImageApp(App):
         self.index = 0
         self.popup = Popup(title='Usage:', content=Label(
             text='Press "f" on the keyboard to find a directory with images\n' + \
-            'Press "r" to rotate an image'),auto_dismiss=False)
+            'Press "r" to rotate an image'),auto_dismiss=True)
         self.popup.open()
-        customwidget = MyCustomImageWidget('.')
-        self.customwidget = customwidget
+        Clock.schedule_once(self.popup.dismiss, 5)
+        
         Window.bind(on_key_down=self._on_keyboard_down)
-        return customwidget
+        
+        self.topwidget = TopBuildWidget()
+        return self.topwidget
         
     def _on_keyboard_down(self, keyboard, x, keycode, text, modifiers):
+        
+        # don't allow the r key, left, or right arrow key just yet until folder is chosen
+        if not hasattr(self, 'customwidget') and not text == 'f':
+            print ('MyCustomImageWidget not created yet,' + \
+                ' press on keyboard f and locate image directory')
+            return False
+        
         if text == 'r':
             self.customwidget.on_press()
 
@@ -161,8 +187,8 @@ class MyImageApp(App):
             self.customwidget.bg.source=self.folderpicker.images[self.index]
             
         elif text == 'f':
-            Window.remove_widget(self.customwidget)
-            Window.clearcolor = (0, 0, 1, 1)
+            Window.remove_widget(self.topwidget)
+            Window.clearcolor = (0, 0, 0, 0)
             self.folderpicker = MyFolderChooser(self)
             Window.add_widget(self.folderpicker)
         return True
