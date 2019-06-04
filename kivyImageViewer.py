@@ -34,7 +34,6 @@ import os
 from pathlib import Path
 
 
-
 class TopBuildWidget(Widget):
     def __init__(self, *args, **kwargs):
         super(TopBuildWidget, self).__init__(**kwargs)
@@ -58,7 +57,6 @@ class MyCustomImageWidget(Widget):
         super(MyCustomImageWidget, self).__init__(**kwargs)
 
         with self.canvas:
-        
             self.bg = Image(source=filepath)
             
             self.allow_stretch = True
@@ -100,13 +98,17 @@ class MyFolderChooser(Widget):
         self.buttonselectfolder = Button(text='Select folder', 
             size=(Window.width, 40), size_hint=(None, None))
         
-        
         self.buttonselectfolder.bind(on_press=self.on_submit)
         self.add_widget(self.buttonselectfolder)
         
     def on_submit(self, *args):
-    
-        selection = self.fclv.selection[0]
+        
+        if len(self.fclv.selection) > 0:
+            selection = self.fclv.selection[0]
+        else:
+            print ('need to choose image directory folder or a file')
+            return
+        
         if os.path.isdir(selection):
             self.stored_folder = selection
         elif os.path.isfile(selection):
@@ -114,7 +116,6 @@ class MyFolderChooser(Widget):
         self.load_images(self.stored_folder)
  
     def load_images(self, f):
-    
         folder = f
         ext = (".jpg",".gif",".bmp",".tif",".png",".tga",".webp")
         filename = False
@@ -139,7 +140,7 @@ class MyFolderChooser(Widget):
                 pass    
                 
         Window.remove_widget(self)
-
+        
         cw = MyCustomImageWidget(directory)
         Window.add_widget(cw)
         self.superparent.customwidget = cw   # needed for the Window keybindings
@@ -147,6 +148,7 @@ class MyFolderChooser(Widget):
         
         if len(self.images) >= 1:
             cw.bg.source=self.images[0]
+
 
 class MyImageApp(App):
 
@@ -195,4 +197,3 @@ class MyImageApp(App):
 
 if __name__ == '__main__':
     MyImageApp().run()
-
