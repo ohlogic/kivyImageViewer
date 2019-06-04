@@ -156,7 +156,8 @@ class MyImageApp(App):
         self.index = 0
         self.popup = Popup(title='Usage:', content=Label(
             text='Press "f" on the keyboard to find a directory with images\n' + \
-            'Press "r" to rotate an image'),auto_dismiss=True)
+            'Press "r" to rotate an image\n' + \
+            'Press the left and right arrows on keyboard to cycle images'),auto_dismiss=True)
         self.popup.open()
         Clock.schedule_once(self.popup.dismiss, 5)
         
